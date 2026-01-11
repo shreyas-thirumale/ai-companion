@@ -435,7 +435,6 @@
                                             <div class="bg-white/10 rounded p-2 text-xs">
                                                 <div class="font-medium text-white/90">${escapeHtml(source.title)} (${source.source_type.toUpperCase()})</div>
                                                 <div class="text-white/70 mt-1">${escapeHtml(source.excerpt)}</div>
-                                                <div class="text-blue-300 mt-1">Match: ${Math.round(source.relevance_score * 100)}%</div>
                                             </div>
                                         `).join('')}
                                     </div>
@@ -473,7 +472,7 @@
         async function forceRefreshDocuments() {
             try {
                 console.log('Force refreshing documents data...');
-                const response = await fetch('http://localhost:8000/api/v1/documents');
+                const response = await fetch('/api/v1/documents');
                 const data = await response.json();
                 documentsData = data.documents;
                 console.log('Documents data updated:', documentsData.length, 'documents');
@@ -545,8 +544,8 @@
         }
 
         // Clear chat history
-        function clearChatHistory() {
-            if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+        function clearChatHistory(skipConfirmation = false) {
+            if (skipConfirmation || confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
                 chatHistory = [];
                 localStorage.removeItem('secondBrainChatHistory');
                 
@@ -581,13 +580,18 @@
                                     <div class="glass-effect rounded-lg p-3 text-xs text-gray-300">
                                         🔍 Or: "Tell me about machine learning"
                                     </div>
+                                    <div class="glass-effect rounded-lg p-3 text-xs text-gray-300">
+                                        🗑️ Type: "/clear" to clear chat
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     `;
                 }
                 
-                alert('Chat history cleared successfully!');
+                if (!skipConfirmation) {
+                    alert('Chat history cleared successfully!');
+                }
             }
         }
 
@@ -701,7 +705,7 @@
                 try {
                     console.log(`Uploading file: ${file.name} (${file.size} bytes, ${file.type})`);
                     
-                    const response = await fetch('http://localhost:8000/api/v1/documents/upload', {
+                    const response = await fetch('/api/v1/documents/upload', {
                         method: 'POST',
                         body: formData
                     });
@@ -774,7 +778,7 @@
             loadingElement.style.display = 'flex';
             
             try {
-                const response = await fetch('http://localhost:8000/api/v1/documents');
+                const response = await fetch('/api/v1/documents');
                 console.log('Documents API response status:', response.status);
                 
                 const data = await response.json();
@@ -911,13 +915,18 @@
                                         </span>
                                     </div>
                                     <div class="flex items-center space-x-2">
-                                        <button onclick="viewDocument('${doc.id}')" class="text-blue-400 hover:text-blue-300 transition-colors">
+                                        <button onclick="viewDocument('${doc.id}')" class="text-blue-400 hover:text-blue-300 transition-colors" title="View Document">
                                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                             </svg>
                                         </button>
-                                        <button onclick="deleteDocument('${doc.id}')" class="text-red-400 hover:text-red-300 transition-colors">
+                                        <button onclick="downloadDocument('${doc.id}')" class="text-green-400 hover:text-green-300 transition-colors" title="Download Document">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                        </button>
+                                        <button onclick="deleteDocument('${doc.id}')" class="text-red-400 hover:text-red-300 transition-colors" title="Delete Document">
                                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                             </svg>
@@ -983,6 +992,57 @@
             }
         }
 
+        async function downloadDocument(docId) {
+            const doc = documentsData.find(d => d.id === docId);
+            if (!doc) {
+                alert('Document not found in current list');
+                return;
+            }
+            
+            try {
+                console.log('Downloading document:', docId);
+                
+                // Create a download link and trigger it
+                const response = await fetch(`/api/v1/documents/${docId}/download`);
+                
+                if (response.ok) {
+                    // Get the filename from the Content-Disposition header
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = `${doc.title}.txt`; // Default filename
+                    
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                        if (filenameMatch) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+                    
+                    // Create blob and download
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    console.log('Download successful:', filename);
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    alert(`Failed to download document: ${errorData.detail || `HTTP ${response.status}`}`);
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    alert('Network error: Could not connect to server. Make sure the backend is running.');
+                } else {
+                    alert(`Download failed: ${error.message}`);
+                }
+            }
+        }
+
         async function deleteDocument(docId) {
             const doc = documentsData.find(d => d.id === docId);
             if (!doc) {
@@ -994,7 +1054,7 @@
                 try {
                     console.log('Deleting document:', docId);
                     
-                    const response = await fetch(`http://localhost:8000/api/v1/documents/${docId}`, {
+                    const response = await fetch(`/api/v1/documents/${docId}`, {
                         method: 'DELETE'
                     });
                     
@@ -1055,6 +1115,14 @@
             
             if (!message || isTyping) return;
             
+            // Check for special commands
+            if (message.toLowerCase() === '/clear') {
+                clearChatHistory(true); // Skip confirmation for command
+                input.value = '';
+                input.style.height = 'auto';
+                return;
+            }
+            
             // Add user message
             addMessageToChat('user', message);
             input.value = '';
@@ -1064,7 +1132,7 @@
             showTypingIndicator();
             
             try {
-                const response = await fetch('http://localhost:8000/api/v1/query', {
+                const response = await fetch('/api/v1/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1216,7 +1284,7 @@
         // Test the connection on load
         window.addEventListener('load', async () => {
             try {
-                const response = await fetch('http://localhost:8000/health');
+                const response = await fetch('/health');
                 if (response.ok) {
                     document.getElementById('status-dot').className = 'w-2 h-2 rounded-full bg-green-400 shadow-lg shadow-green-400/50 animate-pulse';
                 } else {

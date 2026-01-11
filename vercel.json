@@ -2,21 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
+      "src": "api/app.py",
+      "use": "@vercel/python"
     },
     {
-      "src": "api/*.py",
-      "use": "@vercel/python"
+      "src": "index.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/api/app.py"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
     },
     {
       "src": "/(.*)",
@@ -24,7 +25,7 @@
     }
   ],
   "functions": {
-    "api/*.py": {
+    "api/app.py": {
       "runtime": "python3.9"
     }
   }

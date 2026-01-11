@@ -15,30 +15,44 @@ import random
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import os
-import tempfile
 import whisper
-from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo import TEXT, DESCENDING
-import logging
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
-import re
-from dateutil import parser as date_parser
-from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-import hashlib
+import tempfile
+import os
+import logging
+import re
+from dateutil import parser as date_parser
+from dateutil.relativedelta import relativedelta
+
+# Load Whisper model (using base model for balance of speed and accuracy)
+logger = logging.getLogger(__name__)
+print("🎵 Loading Whisper model for audio transcription...")
+try:
+    import whisper
+    whisper_model = whisper.load_model("base")
+    print("✅ Whisper model loaded successfully!")
+    WHISPER_AVAILABLE = True
+except ImportError:
+    print("⚠️ Whisper not available - audio transcription disabled")
+    whisper_model = None
+    WHISPER_AVAILABLE = False
+except Exception as e:
+    print(f"⚠️ Whisper loading failed: {e} - audio transcription disabled")
+    whisper_model = None
+    WHISPER_AVAILABLE = False
 
 # Load environment variables
 load_dotenv()
 
 # Configure OpenAI/OpenRouter from environment
-from openai import OpenAI
+import requests
+import json
 
-# Get configuration from environment variables
+# OpenRouter configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
 MONGODB_URL = os.getenv("MONGODB_URL")
@@ -56,11 +70,8 @@ if not OPENAI_API_KEY:
 if not MONGODB_URL:
     raise ValueError("MONGODB_URL environment variable is required")
 
-# Set up OpenAI client
-client = OpenAI(
-    api_key=OPENAI_API_KEY,
-    base_url=OPENAI_BASE_URL
-)
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import TEXT, DESCENDING
 
 # Set up rate limiting
 limiter = Limiter(key_func=get_remote_address)
@@ -72,14 +83,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Load Whisper model (using base model for balance of speed and accuracy)
-logger.info("🎵 Loading Whisper model for audio transcription...")
-whisper_model = whisper.load_model("base")
-logger.info("✅ Whisper model loaded successfully!")
-
 # MongoDB Configuration from environment
 DOCUMENTS_COLLECTION = "documents"
 CONVERSATIONS_COLLECTION = "conversations"
+
+# Global MongoDB client
+mongo_client = None
+database = None
+documents_collection = None
+conversations_collection = None
 
 # Global MongoDB client
 mongo_client = None
@@ -275,24 +287,42 @@ async def validate_file_upload(file: UploadFile) -> Dict[str, Any]:
     }
 
 async def generate_embedding(text: str) -> List[float]:
-    """Generate embedding using OpenAI API with error handling"""
+    """Generate embedding using OpenRouter API with direct HTTP requests"""
     try:
         if not text or len(text.strip()) == 0:
             logger.warning("Empty text provided for embedding generation")
             return []
         
-        # Truncate text if too long (OpenAI has token limits)
-        if len(text) > 8000:  # Conservative limit
+        # Truncate text if too long
+        if len(text) > 8000:
             text = text[:8000]
             logger.warning("Text truncated for embedding generation")
         
-        response = client.embeddings.create(
-            model="text-embedding-ada-002",
-            input=text
+        headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": "text-embedding-ada-002",
+            "input": text
+        }
+        
+        response = requests.post(
+            f"{OPENAI_BASE_URL}/embeddings",
+            headers=headers,
+            json=data,
+            timeout=30
         )
-        embedding = response.data[0].embedding
-        logger.debug(f"Generated embedding with {len(embedding)} dimensions")
-        return embedding
+        
+        if response.status_code == 200:
+            result = response.json()
+            embedding = result["data"][0]["embedding"]
+            logger.debug(f"Generated embedding with {len(embedding)} dimensions")
+            return embedding
+        else:
+            logger.error(f"Embedding API error: {response.status_code} - {response.text}")
+            return []
         
     except Exception as e:
         logger.error(f"Embedding generation error: {e}")
@@ -405,7 +435,8 @@ def calculate_temporal_relevance(doc_created_at: datetime, temporal_context: Dic
             time_diff = (doc_created_at - temporal_context['end']).total_seconds()
         
         # Exponential decay based on time difference (30-day half-life)
-        proximity_score = 0.5 * np.exp(-time_diff / (30 * 24 * 3600))
+        import math
+        proximity_score = 0.5 * math.exp(-time_diff / (30 * 24 * 3600))
         return max(0.1, proximity_score)  # Minimum score of 0.1
     """Generate embedding using OpenAI API"""
     try:
@@ -419,7 +450,7 @@ def calculate_temporal_relevance(doc_created_at: datetime, temporal_context: Dic
         return []
 
 async def search_documents(query: str) -> List[Dict[str, Any]]:
-    """Advanced hybrid search: Lexical + Semantic + Temporal awareness"""
+    """Ultra-strict search with zero tolerance for irrelevant matches"""
     
     try:
         search_results = []
@@ -436,246 +467,147 @@ async def search_documents(query: str) -> List[Dict[str, Any]]:
         logger.debug(f"🔍 Generating query embedding...")
         query_embedding = await generate_embedding(query)
         
-        # 1. MongoDB Full-Text Search (Lexical) with optional temporal filtering
-        logger.debug(f"📝 Performing lexical search...")
+        # Prepare query for better matching - ULTRA STRICT WORD FILTERING
+        query_lower = query.lower().strip()
+        query_words = [word.strip('.,!?;:') for word in query_lower.split() if len(word) > 2]
         
-        # Build search query with temporal filter if present
-        search_query = {"$text": {"$search": query}}
+        # ULTRA-STRICT stop words - much more comprehensive
+        stop_words = {
+            'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use',
+            'this', 'that', 'with', 'have', 'will', 'from', 'they', 'been', 'said', 'each', 'which', 'their', 'time', 'would', 'there', 'what', 'about', 'when', 'where', 'some', 'more', 'very', 'into', 'just', 'only', 'over', 'also', 'back', 'after', 'first', 'well', 'year', 'work', 'such', 'make', 'even', 'most', 'take', 'than', 'many', 'come', 'could', 'should', 'through', 'being', 'before', 'here', 'between', 'both', 'under', 'again', 'while', 'last', 'might', 'great', 'little', 'still', 'public', 'read', 'know', 'never', 'may', 'another', 'same', 'any', 'these', 'give', 'most', 'us', 'like', 'good', 'want', 'look', 'think', 'find', 'right', 'long', 'much', 'need', 'part', 'place', 'tell', 'turn', 'call', 'move', 'live', 'seem', 'feel', 'try', 'ask', 'show', 'play', 'run', 'own', 'leave', 'point', 'help', 'keep', 'start', 'become', 'open', 'walk', 'talk', 'sit', 'stand', 'lose', 'pay', 'meet', 'include', 'continue', 'set', 'learn', 'change', 'lead', 'understand', 'watch', 'follow', 'stop', 'create', 'speak', 'read', 'allow', 'add', 'spend', 'grow', 'offer', 'remember', 'love', 'consider', 'appear', 'buy', 'wait', 'serve', 'die', 'send', 'expect', 'build', 'stay', 'fall', 'cut', 'reach', 'kill', 'remain'
+        }
+        
+        # Extract meaningful query words with ULTRA-STRICT filtering
+        meaningful_query_words = []
+        for word in query_words:
+            if (len(word) >= 4 and  # Minimum 4 characters (was 3)
+                word not in stop_words and 
+                not word.isdigit() and  # No pure numbers
+                word.isalpha() and  # Only alphabetic words
+                not word in ['that', 'this', 'with', 'from', 'they', 'have', 'been', 'were', 'said', 'each', 'which', 'their', 'time', 'will', 'about', 'would', 'there', 'could', 'other']):  # Additional exclusions
+                meaningful_query_words.append(word)
+        
+        logger.info(f"🔍 Query: '{query}' -> Meaningful words: {meaningful_query_words}")
+        
+        # If no meaningful words, return empty results
+        if not meaningful_query_words:
+            logger.info(f"❌ No meaningful words found in query '{query}' - returning empty results")
+            return []
+        
+        # Get all documents for evaluation
+        all_docs_query = {}
         if temporal_context.get('start') and temporal_context.get('end'):
-            search_query["created_at"] = {
+            all_docs_query["created_at"] = {
                 "$gte": temporal_context['start'],
                 "$lte": temporal_context['end']
             }
             logger.info(f"🕒 Applied temporal filter: {temporal_context['start']} to {temporal_context['end']}")
         
-        text_search_cursor = documents_collection.find(
-            search_query,
-            {"score": {"$meta": "textScore"}}
-        ).sort([("score", {"$meta": "textScore"})])
-        
-        lexical_results = {}
-        async for doc in text_search_cursor:
-            lexical_results[doc["id"]] = {
-                "doc": doc,
-                "lexical_score": doc.get("score", 0)
-            }
-        
-        # 2. Semantic Search (if embeddings available) with temporal filtering
-        semantic_results = {}
-        if query_embedding:
-            logger.debug(f"🧠 Performing semantic search...")
-            
-            # Build semantic search query with temporal filter
-            semantic_query = {"embedding": {"$exists": True}}
-            if temporal_context.get('start') and temporal_context.get('end'):
-                semantic_query["created_at"] = {
-                    "$gte": temporal_context['start'],
-                    "$lte": temporal_context['end']
-                }
-            
-            # Get all documents with embeddings (with temporal filter if present)
-            async for doc in documents_collection.find(semantic_query):
-                if "embedding" in doc and doc["embedding"]:
-                    # Calculate cosine similarity
-                    doc_embedding = np.array(doc["embedding"])
-                    query_emb = np.array(query_embedding)
-                    
-                    similarity = cosine_similarity([query_emb], [doc_embedding])[0][0]
-                    
-                    semantic_results[doc["id"]] = {
-                        "doc": doc,
-                        "semantic_score": similarity
-                    }
-        
-        # 3. Combine and score results with temporal awareness
-        logger.debug(f"⚖️ Combining lexical, semantic, and temporal scores...")
-        all_doc_ids = set(lexical_results.keys()) | set(semantic_results.keys())
-        
-        for doc_id in all_doc_ids:
-            # Get document
-            if doc_id in lexical_results:
-                doc = lexical_results[doc_id]["doc"]
-            else:
-                doc = semantic_results[doc_id]["doc"]
-            
-            # Get base scores
-            lexical_score = lexical_results.get(doc_id, {}).get("lexical_score", 0)
-            semantic_score = semantic_results.get(doc_id, {}).get("semantic_score", 0)
-            
-            # Calculate temporal relevance score
-            temporal_score = 0.5  # Default neutral score
-            if temporal_context.get('start') and temporal_context.get('end'):
-                doc_created_at = doc.get("created_at")
-                if isinstance(doc_created_at, datetime):
-                    temporal_score = calculate_temporal_relevance(doc_created_at, temporal_context)
-                elif isinstance(doc_created_at, str):
-                    try:
-                        doc_created_at = datetime.fromisoformat(doc_created_at.replace('Z', '+00:00'))
-                        temporal_score = calculate_temporal_relevance(doc_created_at, temporal_context)
-                    except:
-                        temporal_score = 0.5
-            
-            # Enhanced relevance scoring (from previous implementation)
+        # Evaluate each document with ZERO TOLERANCE approach
+        async for doc in documents_collection.find(all_docs_query):
             content_lower = doc["content"].lower()
-            query_lower = query.lower()
-            query_words = query_lower.split()
+            title_lower = doc["title"].lower()
             
-            # Calculate enhanced relevance with temporal component
-            enhanced_score = 0
+            # STEP 1: Check for exact phrase match (highest priority)
+            exact_phrase_match = False
+            if len(query_lower) > 6:  # Only for substantial queries
+                if query_lower in content_lower or query_lower in title_lower:
+                    exact_phrase_match = True
+                    logger.info(f"✅ EXACT PHRASE MATCH: '{doc['title']}' contains '{query_lower}'")
             
-            # Lexical component (30% weight)
-            enhanced_score += lexical_score * 30
-            
-            # Semantic component (30% weight) 
-            enhanced_score += semantic_score * 100 * 30  # Scale semantic score
-            
-            # Temporal component (20% weight)
-            enhanced_score += temporal_score * 100 * 20
-            
-            # Custom boost factors (20% weight)
-            boost_score = 0
-            
-            # Exact phrase matching (highest boost)
-            if query_lower in content_lower:
-                boost_score += 50
-            
-            # Word matching with context
+            # STEP 2: Check word coverage - ULTRA STRICT
             matched_words = 0
-            for word in query_words:
-                if len(word) > 2:  # Skip short words
-                    word_count = content_lower.count(word)
-                    if word_count > 0:
-                        boost_score += word_count * 10
-                        matched_words += 1
+            word_match_details = []
             
-            # Boost for high word match ratio
-            if len(query_words) > 0:
-                match_ratio = matched_words / len(query_words)
-                boost_score += match_ratio * 30
+            for word in meaningful_query_words:
+                if word in content_lower or word in title_lower:
+                    matched_words += 1
+                    content_count = content_lower.count(word)
+                    title_count = title_lower.count(word)
+                    word_match_details.append(f"{word}(c:{content_count},t:{title_count})")
             
-            # Special boosts for specific content types
-            if doc["source_type"] == "audio":
-                audio_terms = ['recording', 'clip', 'audio', 'transcription', 'said', 'spoke', 'voice']
-                if any(term in query_lower for term in audio_terms):
-                    boost_score += 25
-                    
-                # Boost for personal/family content
-                personal_terms = ['grandfather', 'family', 'age', 'old', 'years', 'person']
-                if any(term in query_lower for term in personal_terms) and any(term in content_lower for term in personal_terms):
-                    boost_score += 35
+            coverage_ratio = matched_words / len(meaningful_query_words) if meaningful_query_words else 0
             
-            enhanced_score += boost_score * 20  # 20% weight for custom boosts
+            logger.debug(f"📊 Document '{doc['title']}': {matched_words}/{len(meaningful_query_words)} words matched ({coverage_ratio:.2f} coverage)")
+            logger.debug(f"📝 Word matches: {word_match_details}")
             
-            search_results.append({
-                "document_id": doc["id"],
-                "chunk_id": f"{doc['id']}-chunk-1",
-                "title": doc["title"],
-                "content": doc["content"][:400] + "..." if len(doc["content"]) > 400 else doc["content"],
-                "relevance_score": min(enhanced_score / 100, 1.0),  # Normalize to 0-1
-                "source_type": doc["source_type"],
-                "created_at": doc["created_at"].isoformat() + "Z" if isinstance(doc["created_at"], datetime) else doc["created_at"],
-                "search_type": "hybrid_lexical_semantic_temporal",
-                "raw_score": enhanced_score,
-                "lexical_score": lexical_score,
-                "semantic_score": semantic_score,
-                "temporal_score": temporal_score,
-                "boost_score": boost_score,
-                "temporal_context": temporal_context if temporal_context else None
-            })
-        
-        # 4. Fallback: Aggressive Regex Search for missed content
-        if len(search_results) < 3:
-            print(f"🔄 Performing regex fallback search...")
-            query_words = [word for word in query.lower().split() if len(word) > 2]
+            # STEP 3: ULTRA-STRICT DECISION LOGIC
+            include_document = False
+            relevance_score = 0.0
             
-            # Build flexible regex patterns
-            for word in query_words:
-                regex_cursor = documents_collection.find({
-                    "$or": [
-                        {"content": {"$regex": word, "$options": "i"}},
-                        {"title": {"$regex": word, "$options": "i"}}
-                    ]
-                })
+            if exact_phrase_match:
+                # Exact phrase match = automatic inclusion with high score
+                include_document = True
+                relevance_score = 1.0  # 100%
+                logger.info(f"✅ INCLUDED (exact phrase): '{doc['title']}' - 100% relevance")
                 
-                async for doc in regex_cursor:
-                    # Avoid duplicates
-                    if not any(result["document_id"] == doc["id"] for result in search_results):
-                        content_lower = doc["content"].lower()
-                        
-                        # Calculate relevance for regex matches
-                        score = 0
-                        for qword in query_words:
-                            if qword in content_lower:
-                                score += content_lower.count(qword) * 15
-                        
-                        # Boost for audio files with personal content
-                        if doc["source_type"] == "audio":
-                            personal_terms = ['grandfather', 'family', 'age', 'old', 'years']
-                            if any(term in content_lower for term in personal_terms):
-                                score += 40
-                        
-                        if score > 10:  # Only include decent matches
-                            search_results.append({
-                                "document_id": doc["id"],
-                                "chunk_id": f"{doc['id']}-chunk-1",
-                                "title": doc["title"],
-                                "content": doc["content"][:400] + "..." if len(doc["content"]) > 400 else doc["content"],
-                                "relevance_score": min(score / 100, 1.0),
-                                "source_type": doc["source_type"],
-                                "created_at": doc["created_at"].isoformat() + "Z" if isinstance(doc["created_at"], datetime) else doc["created_at"],
-                                "search_type": "regex_fallback",
-                                "raw_score": score,
-                                "lexical_score": 0,
-                                "semantic_score": 0,
-                                "boost_score": score
-                            })
+            elif coverage_ratio >= 0.8:  # 80% or more words must match
+                # High coverage = inclusion with good score
+                include_document = True
+                base_score = coverage_ratio * 0.7  # Max 70% for word coverage
+                
+                # Semantic similarity bonus (only for high coverage)
+                semantic_score = 0
+                if query_embedding and "embedding" in doc and doc["embedding"]:
+                    doc_embedding = doc["embedding"]
+                    dot_product = sum(a * b for a, b in zip(query_embedding, doc_embedding))
+                    magnitude_query = sum(a * a for a in query_embedding) ** 0.5
+                    magnitude_doc = sum(a * a for a in doc_embedding) ** 0.5
+                    
+                    if magnitude_query > 0 and magnitude_doc > 0:
+                        semantic_score = dot_product / (magnitude_query * magnitude_doc)
+                
+                # Only add semantic bonus if it's very high
+                semantic_bonus = 0
+                if semantic_score > 0.85:
+                    semantic_bonus = 0.3  # Max 30% bonus
+                elif semantic_score > 0.75:
+                    semantic_bonus = 0.2  # 20% bonus
+                elif semantic_score > 0.65:
+                    semantic_bonus = 0.1  # 10% bonus
+                
+                relevance_score = min(base_score + semantic_bonus, 1.0)
+                logger.info(f"✅ INCLUDED (high coverage): '{doc['title']}' - {relevance_score:.1%} relevance (coverage: {coverage_ratio:.2f}, semantic: {semantic_score:.3f})")
+                
+            else:
+                # Low coverage = COMPLETE REJECTION
+                include_document = False
+                logger.debug(f"❌ REJECTED: '{doc['title']}' - coverage too low ({coverage_ratio:.2f})")
+            
+            # Add to results if included
+            if include_document:
+                search_results.append({
+                    "document_id": doc["id"],
+                    "chunk_id": f"{doc['id']}-chunk-1",
+                    "title": doc["title"],
+                    "content": doc["content"][:400] + "..." if len(doc["content"]) > 400 else doc["content"],
+                    "relevance_score": relevance_score,
+                    "source_type": doc["source_type"],
+                    "created_at": doc["created_at"].isoformat() + "Z" if isinstance(doc["created_at"], datetime) else doc["created_at"],
+                    "search_type": "ultra_strict_zero_tolerance",
+                    "word_matches": matched_words,
+                    "coverage_ratio": coverage_ratio,
+                    "exact_phrase": exact_phrase_match,
+                    "meaningful_words": len(meaningful_query_words)
+                })
         
-        # Sort by enhanced relevance score
-        search_results.sort(key=lambda x: x["raw_score"], reverse=True)
+        # Sort by relevance score (descending)
+        search_results.sort(key=lambda x: x["relevance_score"], reverse=True)
         
-        logger.info(f"✅ Found {len(search_results)} results using hybrid temporal-aware search")
-        if temporal_context:
-            logger.info(f"🕒 Temporal filtering applied: {len([r for r in search_results if r['temporal_score'] > 0.7])} documents in target time range")
+        logger.info(f"✅ FINAL RESULTS: {len(search_results)} documents passed ultra-strict filtering")
+        for result in search_results:
+            logger.info(f"  - {result['title']}: {result['relevance_score']:.1%} relevance")
         
-        # Return top results with better scoring
-        return search_results[:5]
+        # Return top results for AI processing
+        return search_results[:3]
         
     except Exception as e:
-        print(f"❌ Search error: {e}")
-        return []
-
+        logger.error(f"❌ Search error: {e}")
 async def generate_openai_response(query: str, context_docs: List[Dict]) -> str:
-    """Generate response using real OpenAI"""
+    """Generate response using OpenRouter API with direct HTTP requests"""
     
     if not context_docs:
-        # No relevant documents found - be more specific about what's not in the knowledge base
-        try:
-            response = client.chat.completions.create(
-                model="openai/gpt-4o-mini",  # Upgraded to GPT-4o-mini (faster + smarter)
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a helpful AI assistant that acts as a "second brain" for the user. The user asked a question but no relevant information was found in their personal knowledge base.
-
-IMPORTANT: You should clearly state that the specific information they're asking about is not available in their knowledge base. Do not provide general knowledge or speculation about topics not in their documents.
-
-Be helpful by:
-1. Clearly stating the information is not in their knowledge base
-2. Mentioning what types of documents they do have available
-3. Suggesting they upload relevant documents if they want information about this topic"""
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Question: {query}\n\nNote: No relevant documents were found in the user's knowledge base for this query."
-                    }
-                ],
-                max_tokens=300,
-                temperature=0.3
-            )
-            return f"I don't have any information about this in your knowledge base.\n\n{response.choices[0].message.content}"
-        except Exception as e:
-            print(f"OpenAI API error: {e}")
-            return f"I don't have any information about '{query}' in your knowledge base. Your current documents contain information about machine learning, project management, and meeting notes. If you'd like me to help with questions about these topics or others, please upload relevant documents first."
+        return f"I don't have any information about '{query}' in your knowledge base. Your current documents contain information about machine learning, project management, and meeting notes. If you'd like me to help with questions about these topics or others, please upload relevant documents first."
     
     # Build context from user's documents
     context = "Context from your knowledge base:\n\n"
@@ -707,16 +639,37 @@ Guidelines:
     ]
     
     try:
-        response = client.chat.completions.create(
-            model="openai/gpt-4o-mini",  # Upgraded to GPT-4o-mini (faster + smarter)
-            messages=messages,
-            max_tokens=500,
-            temperature=0.7
+        headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": "openai/gpt-4o-mini",
+            "messages": messages,
+            "max_tokens": 500,
+            "temperature": 0.7
+        }
+        
+        response = requests.post(
+            f"{OPENAI_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30
         )
-        return response.choices[0].message.content
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
+        else:
+            logger.error(f"OpenRouter API error: {response.status_code} - {response.text}")
+            # Return a response based on the documents we found, without OpenRouter
+            doc_titles = [doc['title'] for doc in context_docs]
+            return f"I found relevant information in your documents: {', '.join(doc_titles)}. However, I'm having trouble processing the response right now. Please try again or check the source documents directly."
+        
     except Exception as e:
-        print(f"OpenAI API error: {e}")
-        # Return a response based on the documents we found, without OpenAI
+        logger.error(f"OpenRouter API error: {e}")
+        # Return a response based on the documents we found, without OpenRouter
         doc_titles = [doc['title'] for doc in context_docs]
         return f"I found relevant information in your documents: {', '.join(doc_titles)}. However, I'm having trouble processing the response right now. Please try again or check the source documents directly."
 
@@ -869,51 +822,91 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 async def transcribe_audio(audio_content: bytes, filename: str, content_type: str) -> str:
     """Transcribe audio using local Whisper model"""
     
+    if not WHISPER_AVAILABLE:
+        return f"""[AUDIO FILE: {filename}]
+
+Audio transcription is not available in this deployment.
+
+File size: {len(audio_content)} bytes
+Content type: {content_type}
+
+[Audio transcription requires local Whisper installation]"""
+    
     try:
         print(f"🎵 Starting transcription for: {filename}")
         
         # Save audio content to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{filename.split('.')[-1]}") as temp_file:
+        import tempfile
+        import os
+        
+        # Get file extension from filename
+        file_extension = filename.split('.')[-1].lower() if '.' in filename else 'mp3'
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
             temp_file.write(audio_content)
             temp_file_path = temp_file.name
         
         try:
-            # Transcribe using Whisper directly (it handles many audio formats)
-            print(f"🔄 Transcribing audio...")
+            # Transcribe using local Whisper model
+            print(f"🔄 Transcribing audio with local Whisper...")
             result = whisper_model.transcribe(temp_file_path)
             transcript_text = result["text"].strip()
             
             # Clean up temp file
             os.unlink(temp_file_path)
             
-            # Format the transcribed text with metadata
-            transcribed_content = f"""[AUDIO TRANSCRIPTION from {filename}]
+            if transcript_text:
+                # Format the transcribed text with metadata
+                transcribed_content = f"""[AUDIO TRANSCRIPTION from {filename}]
 
 Transcribed Text:
 {transcript_text}
 
-[Transcription completed using Whisper AI]
+[Transcription completed using local Whisper AI model]
 [Original file: {filename}]
 [File size: {len(audio_content)} bytes]
 [Content type: {content_type}]"""
-            
-            print(f"✅ Successfully transcribed audio: {filename} ({len(transcript_text)} characters)")
-            return transcribed_content
-            
-        except Exception as e:
+                
+                print(f"✅ Successfully transcribed audio: {filename} ({len(transcript_text)} characters)")
+                return transcribed_content
+            else:
+                print(f"⚠️ Empty transcription result for: {filename}")
+                return f"""[AUDIO FILE: {filename}]
+
+The audio file was processed but no speech was detected or the audio may be too quiet/unclear.
+
+File size: {len(audio_content)} bytes
+Content type: {content_type}
+
+[No speech detected in audio]"""
+                
+        except Exception as whisper_error:
             # Clean up temp file on error
             if os.path.exists(temp_file_path):
                 os.unlink(temp_file_path)
-            raise e
+            
+            print(f"❌ Whisper transcription error: {str(whisper_error)}")
+            return f"""[AUDIO FILE: {filename}]
+
+Audio transcription failed due to processing error: {str(whisper_error)}
+
+This could be due to:
+- Unsupported audio format (try MP3, WAV, or M4A)
+- Corrupted audio file
+- Audio file too long (Whisper works best with files under 25MB)
+
+File size: {len(audio_content)} bytes
+Content type: {content_type}
+
+[Transcription failed - file stored but not processed]"""
             
     except Exception as e:
         print(f"❌ Audio transcription error: {str(e)}")
-        # Fallback: return a placeholder with file info
         return f"""[AUDIO FILE: {filename}]
 
-This audio file was uploaded but could not be transcribed automatically due to an error: {str(e)}
+This audio file was uploaded but could not be transcribed due to an error: {str(e)}
 
-In a full implementation, this would contain the transcribed text from the audio content.
+The file has been stored in your knowledge base, but without transcription it won't be searchable.
 
 File size: {len(audio_content)} bytes
 Content type: {content_type}
@@ -953,9 +946,9 @@ async def submit_query(request: Request, request_data: dict):
     except Exception as e:
         print(f"⚠️ Failed to save conversation: {e}")
     
-    # Build sources for response
+    # Build sources for response - only include the single best match
     sources = []
-    for result in search_results[:3]:
+    for result in search_results[:1]:  # Only take the first (best) result
         sources.append({
             "document_id": result["document_id"],
             "chunk_id": result["chunk_id"],
@@ -1004,6 +997,70 @@ async def delete_document(request: Request, document_id: str):
     except Exception as e:
         logger.error(f"❌ Delete error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+
+@app.get("/api/v1/documents/{document_id}/download")
+@limiter.limit(f"{RATE_LIMIT_REQUESTS//5}/{RATE_LIMIT_WINDOW}minute")  # Stricter limit for downloads
+async def download_document(request: Request, document_id: str):
+    """Download the original document file"""
+    
+    try:
+        logger.info(f"Attempting to download document: {document_id}")
+        
+        # Find the document
+        doc = await documents_collection.find_one({"id": document_id})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Get document details
+        title = doc.get("title", "document")
+        source_type = doc.get("source_type", "text")
+        content = doc.get("content", "")
+        
+        # Determine file extension and content type based on source type
+        if source_type == "audio":
+            # For audio files, we can't recreate the original binary data
+            # Instead, provide the transcription as a text file
+            file_extension = "txt"
+            content_type = "text/plain"
+            filename = f"{title}_transcription.txt"
+            file_content = content.encode('utf-8')
+        elif source_type == "pdf":
+            # For PDFs, we can't recreate the original PDF
+            # Provide the extracted text as a text file
+            file_extension = "txt"
+            content_type = "text/plain"
+            filename = f"{title}_extracted_text.txt"
+            file_content = content.encode('utf-8')
+        elif source_type == "text":
+            # For text files, we can provide the original content
+            file_extension = "txt"
+            content_type = "text/plain"
+            filename = f"{title}.txt"
+            file_content = content.encode('utf-8')
+        else:
+            # Default to text
+            file_extension = "txt"
+            content_type = "text/plain"
+            filename = f"{title}.txt"
+            file_content = content.encode('utf-8')
+        
+        # Create response with proper headers for download
+        from fastapi.responses import Response
+        
+        return Response(
+            content=file_content,
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f"attachment; filename=\"{filename}\"",
+                "Content-Length": str(len(file_content))
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Download error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
 @app.get("/api/v1/conversations")
 async def get_conversations():
