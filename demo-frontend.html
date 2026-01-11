@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Second Brain AI Companion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'goldman': ['Goldman', 'Orbitron', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                    },
+                    animation: {
+                        'gradient': 'gradient 15s ease infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .animated-bg {
+            background: linear-gradient(-45deg, #0f0f23, #1a1a2e, #16213e, #0f0f23);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        .content-full {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+        .content-preview {
+            line-height: 1.5;
+            white-space: normal;
+        }
+        .content-full::-webkit-scrollbar {
+            width: 4px;
+        }
+        .content-full::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+        .content-full::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 2px;
+        }
+        .content-full::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.7);
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, rgb(59 130 246), rgb(147 51 234));
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="animated-bg text-white min-h-screen font-goldman">
+    <!-- Particles -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+        <div class="absolute top-20 left-20 w-2 h-2 bg-blue-400 rounded-full opacity-60 animate-pulse"></div>
+        <div class="absolute top-40 right-32 w-1 h-1 bg-purple-400 rounded-full opacity-40 animate-ping"></div>
+        <div class="absolute bottom-32 left-1/4 w-1.5 h-1.5 bg-blue-300 rounded-full opacity-50 animate-pulse"></div>
+        <div class="absolute top-1/3 right-1/4 w-1 h-1 bg-purple-300 rounded-full opacity-30 animate-ping"></div>
+    </div>
+
+    <div class="flex h-screen relative z-10">
+        <!-- Sidebar -->
+        <div class="w-64 glass-effect border-r border-gray-700/50">
+            <div class="flex h-full flex-col">
+                <!-- Logo -->
+                <div class="flex h-16 items-center px-6 border-b border-gray-700/50">
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <svg class="h-8 w-8 text-blue-400 glow-effect animate-float" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <svg class="h-4 w-4 text-purple-400 absolute -top-1 -right-1 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent font-goldman">
+                                Second Brain
+                            </span>
+                            <div class="text-xs text-gray-400 font-goldman">AI Companion</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="flex-1 px-4 py-6 space-y-2">
+                    <div id="nav-chat" class="nav-item flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-600/30 to-purple-600/30 text-blue-300 border border-blue-500/30 cursor-pointer font-goldman" onclick="showPage('chat')">
+                        <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        Chat
+                    </div>
+                    <div id="nav-documents" class="nav-item flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all duration-300 cursor-pointer font-goldman" onclick="showPage('documents')">
+                        <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0.621 0 1.125-.504 1.125-1.125V9.375c0-.621.504-1.125 1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+                        </svg>
+                        Documents
+                    </div>
+                </nav>
+
+                <!-- Footer -->
+                <div class="p-4 border-t border-gray-700/50">
+                    <div class="glass-effect rounded-lg p-3">
+                        <p class="text-xs text-gray-300 text-center font-goldman">🧠 Your personal AI companion</p>
+                        <div class="flex justify-center mt-2 space-x-1">
+                            <div class="w-1 h-1 bg-green-400 rounded-full animate-pulse"></div>
+                            <div class="w-1 h-1 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+                            <div class="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Chat Page -->
+            <div id="chat-page" class="flex-1 flex flex-col">
+                <!-- Header -->
+                <div class="glass-effect border-b border-gray-700/50 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="relative">
+                                <svg class="h-8 w-8 text-blue-400 glow-effect animate-float" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                <svg class="h-4 w-4 text-purple-400 absolute -top-1 -right-1 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent font-goldman">
+                                    AI Chat
+                                </h1>
+                                <p class="text-sm text-gray-400 font-goldman">Ask questions about your documents and knowledge base</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="showUploadModal()" class="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl flex items-center space-x-2">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <span>Upload</span>
+                            </button>
+                            <div class="flex items-center space-x-2">
+                                <div id="status-dot" class="w-2 h-2 rounded-full bg-green-400 shadow-lg shadow-green-400/50 animate-pulse"></div>
+                                <span class="text-xs text-gray-400">Connected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-6 scrollbar-thin">
+                    <!-- Welcome Message -->
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center max-w-md">
+                            <div class="relative mb-6">
+                                <div class="w-20 h-20 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-full flex items-center justify-center mx-auto glow-effect">
+                                    <svg class="h-10 w-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                    </svg>
+                                </div>
+                                <div class="absolute -top-2 -right-2">
+                                    <svg class="h-6 w-6 text-purple-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <h3 class="text-xl font-semibold text-white mb-3 font-goldman" style="text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);">
+                                Start a conversation
+                            </h3>
+                            <p class="text-gray-400 leading-relaxed mb-6 font-goldman">
+                                Ask questions about your documents and knowledge base. I'll help you find and understand information with the power of AI.
+                            </p>
+                            <div class="flex justify-center space-x-4">
+                                <div class="glass-effect rounded-lg p-3 text-xs text-gray-300">
+                                    💡 Try: "What's in my documents?"
+                                </div>
+                                <div class="glass-effect rounded-lg p-3 text-xs text-gray-300">
+                                    🔍 Or: "Tell me about machine learning"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input -->
+                <div class="glass-effect border-t border-gray-700/50 px-6 py-4">
+                    <form onsubmit="sendMessage(event)" class="flex items-end space-x-3">
+                        <div class="flex-1 relative">
+                            <textarea 
+                                id="messageInput"
+                                placeholder="Ask me anything about your documents..."
+                                class="block w-full rounded-lg border-gray-600 bg-gray-800/50 backdrop-blur-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-white placeholder-gray-400 transition-all duration-300 resize-none pr-12"
+                                rows="1"
+                                style="min-height: 44px; max-height: 120px;"
+                                onkeypress="handleKeyPress(event)"
+                                oninput="autoResize(this)"
+                            ></textarea>
+                            <button type="button" onclick="showUploadModal()" class="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-blue-400 transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <button 
+                            type="submit"
+                            class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center space-x-2"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                            <span class="hidden sm:inline">Send</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Documents Page -->
+            <div id="documents-page" class="flex-1 flex-col hidden">
+                <!-- Header -->
+                <div class="glass-effect border-b border-gray-700/50 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="relative">
+                                <svg class="h-8 w-8 text-blue-400 glow-effect animate-float" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0.621 0 1.125-.504 1.125-1.125V9.375c0-.621.504-1.125 1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+                                </svg>
+                                <svg class="h-4 w-4 text-purple-400 absolute -top-1 -right-1 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent font-goldman">
+                                    Documents
+                                </h1>
+                                <p class="text-sm text-gray-400 font-goldman">Manage your knowledge base</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="showUploadModal()" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl flex items-center space-x-2">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                <span>Add Document</span>
+                            </button>
+                            <button onclick="loadDocuments()" class="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl flex items-center space-x-2">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                <span>Refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents List -->
+                <div class="flex-1 overflow-y-auto px-6 py-4 scrollbar-thin">
+                    <div id="documents-list" class="space-y-4">
+                        <!-- Loading state -->
+                        <div id="documents-loading" class="flex items-center justify-center h-64">
+                            <div class="text-center">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                                    <svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0.621 0 1.125-.504 1.125-1.125V9.375c0-.621.504-1.125 1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+                                    </svg>
+                                </div>
+                                <p class="text-gray-400">Loading documents...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="upload-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="glass-effect rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-700/50">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent font-goldman">
+                    Upload Document
+                </h3>
+                <button onclick="hideUploadModal()" class="text-gray-400 hover:text-white transition-colors">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <div id="drop-zone" class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                    <svg class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p class="text-gray-300 mb-2">Drop files here or click to browse</p>
+                    <p class="text-xs text-gray-500">Supports PDF, TXT, MD, Audio (MP3, WAV, M4A), and more</p>
+                </div>
+                <input type="file" id="file-input" class="hidden" multiple accept=".pdf,.txt,.md,.doc,.docx,.mp3,.wav,.m4a,.ogg,.flac,.aac,.aiff,.aif">
+            </div>
+            
+            <div id="upload-progress" class="hidden mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-300">Uploading...</span>
+                    <span id="upload-percent" class="text-sm text-blue-400">0%</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                    <div id="upload-bar" class="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div class="flex space-x-3">
+                <button onclick="hideUploadModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button onclick="startUpload()" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300">
+                    Upload
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isTyping = false;
+        let currentPage = 'chat';
+        let documentsData = [];
+        let chatHistory = []; // Store chat messages
+
+        // Load chat history from localStorage on page load
+        function loadChatHistory() {
+            try {
+                const saved = localStorage.getItem('secondBrainChatHistory');
+                if (saved) {
+                    chatHistory = JSON.parse(saved);
+                    console.log('Loaded chat history:', chatHistory.length, 'messages');
+                    
+                    // Restore chat messages to the UI
+                    const messagesContainer = document.getElementById('messages');
+                    if (messagesContainer && chatHistory.length > 0) {
+                        // Clear welcome message
+                        messagesContainer.innerHTML = '';
+                        
+                        // Restore each message
+                        chatHistory.forEach(message => {
+                            addMessageToChat(message.type, message.text, message.sources, false); // false = don't save to history again
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+                chatHistory = [];
+            }
+        }
+
+        // Save chat history to localStorage
+        function saveChatHistory() {
+            try {
+                localStorage.setItem('secondBrainChatHistory', JSON.stringify(chatHistory));
+            } catch (error) {
+                console.error('Error saving chat history:', error);
+            }
+        }
+
+        // Add message to chat and optionally save to history
+        function addMessageToChat(type, text, sources = null, saveToHistory = true) {
+            const messagesContainer = document.getElementById('messages');
+            if (!messagesContainer) return;
+            
+            // Clear welcome message if this is the first real message
+            if (messagesContainer.children.length === 1 && messagesContainer.children[0].classList.contains('flex-items-center')) {
+                messagesContainer.innerHTML = '';
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'} mb-4`;
+            
+            const messageContent = `
+                <div class="max-w-3xl ${type === 'user' ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'glass-effect'} rounded-lg p-4 shadow-lg">
+                    <div class="flex items-start space-x-3">
+                        <div class="flex-shrink-0">
+                            ${type === 'user' ? 
+                                '<div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><svg class="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg></div>' :
+                                '<div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center"><svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>'
+                            }
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-white text-sm leading-relaxed">${escapeHtml(text)}</div>
+                            ${sources && sources.length > 0 ? `
+                                <div class="mt-3 pt-3 border-t border-white/20">
+                                    <div class="text-xs text-white/70 mb-2">📚 Sources:</div>
+                                    <div class="space-y-2">
+                                        ${sources.map(source => `
+                                            <div class="bg-white/10 rounded p-2 text-xs">
+                                                <div class="font-medium text-white/90">${escapeHtml(source.title)} (${source.source_type.toUpperCase()})</div>
+                                                <div class="text-white/70 mt-1">${escapeHtml(source.excerpt)}</div>
+                                                <div class="text-blue-300 mt-1">Match: ${Math.round(source.relevance_score * 100)}%</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            messageDiv.innerHTML = messageContent;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Save to history if requested
+            if (saveToHistory) {
+                chatHistory.push({
+                    type: type,
+                    text: text,
+                    sources: sources,
+                    timestamp: new Date().toISOString()
+                });
+                saveChatHistory();
+            }
+        }
+
+        // XSS Protection - HTML escaping function
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Force refresh documents list (can be called from any page)
+        async function forceRefreshDocuments() {
+            try {
+                console.log('Force refreshing documents data...');
+                const response = await fetch('http://localhost:8000/api/v1/documents');
+                const data = await response.json();
+                documentsData = data.documents;
+                console.log('Documents data updated:', documentsData.length, 'documents');
+                
+                // If we're currently on the documents page, update the visual display
+                if (currentPage === 'documents') {
+                    console.log('Currently on documents page, updating visual display...');
+                    const listElement = document.getElementById('documents-list');
+                    const loadingElement = document.getElementById('documents-loading');
+                    
+                    if (listElement) {
+                        // Hide loading indicator if it's showing
+                        if (loadingElement) {
+                            loadingElement.style.display = 'none';
+                        }
+                        
+                        console.log('Rendering documents:', documentsData.length);
+                        renderDocuments(documentsData);
+                        console.log('Documents rendered successfully');
+                    } else {
+                        console.warn('documents-list element not found');
+                    }
+                } else {
+                    console.log('Not on documents page, data updated but not rendering');
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error refreshing documents:', error);
+                return false;
+            }
+        }
+
+        // Helper function to clean up text formatting
+        function cleanText(text) {
+            return text
+                .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+                .replace(/\s*\n\s*/g, '\n')  // Clean up line breaks
+                .replace(/\s*-\s*/g, '\n- ')  // Format bullet points
+                .trim();
+        }
+
+        // Page navigation
+        function showPage(page) {
+            // Hide all pages
+            document.getElementById('chat-page').classList.add('hidden');
+            document.getElementById('documents-page').classList.add('hidden');
+            
+            // Show selected page
+            document.getElementById(page + '-page').classList.remove('hidden');
+            document.getElementById(page + '-page').classList.add('flex');
+            
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('bg-gradient-to-r', 'from-blue-600/30', 'to-purple-600/30', 'text-blue-300', 'border', 'border-blue-500/30');
+                item.classList.add('text-gray-400', 'hover:text-white', 'hover:bg-gray-800/50');
+            });
+            
+            const activeNav = document.getElementById('nav-' + page);
+            activeNav.classList.remove('text-gray-400', 'hover:text-white', 'hover:bg-gray-800/50');
+            activeNav.classList.add('bg-gradient-to-r', 'from-blue-600/30', 'to-purple-600/30', 'text-blue-300', 'border', 'border-blue-500/30');
+            
+            currentPage = page;
+            
+            // Load documents if switching to documents page
+            if (page === 'documents') {
+                loadDocuments();
+            }
+        }
+
+        // Clear chat history
+        function clearChatHistory() {
+            if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+                chatHistory = [];
+                localStorage.removeItem('secondBrainChatHistory');
+                
+                // Reset chat UI to welcome message
+                const messagesContainer = document.getElementById('messages');
+                if (messagesContainer) {
+                    messagesContainer.innerHTML = `
+                        <div class="flex items-center justify-center h-full">
+                            <div class="text-center max-w-md">
+                                <div class="relative mb-6">
+                                    <div class="w-20 h-20 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-full flex items-center justify-center mx-auto glow-effect">
+                                        <svg class="h-10 w-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                        </svg>
+                                    </div>
+                                    <div class="absolute -top-2 -right-2">
+                                        <svg class="h-6 w-6 text-purple-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <h3 class="text-xl font-semibold text-white mb-3 font-goldman" style="text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);">
+                                    Start a conversation
+                                </h3>
+                                <p class="text-gray-400 leading-relaxed mb-6 font-goldman">
+                                    Ask questions about your documents and knowledge base. I'll help you find and understand information with the power of AI.
+                                </p>
+                                <div class="flex justify-center space-x-4">
+                                    <div class="glass-effect rounded-lg p-3 text-xs text-gray-300">
+                                        💡 Try: "What's in my documents?"
+                                    </div>
+                                    <div class="glass-effect rounded-lg p-3 text-xs text-gray-300">
+                                        🔍 Or: "Tell me about machine learning"
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                alert('Chat history cleared successfully!');
+            }
+        }
+
+        // Initialize page on load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadChatHistory();
+        });
+
+        // Upload modal functions
+        function showUploadModal() {
+            document.getElementById('upload-modal').classList.remove('hidden');
+        }
+
+        function hideUploadModal() {
+            document.getElementById('upload-modal').classList.add('hidden');
+            document.getElementById('upload-progress').classList.add('hidden');
+            document.getElementById('upload-bar').style.width = '0%';
+            document.getElementById('upload-percent').textContent = '0%';
+            document.getElementById('file-input').value = '';
+            
+            // Reset drop zone
+            const dropZone = document.getElementById('drop-zone');
+            dropZone.innerHTML = `
+                <svg class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <p class="text-gray-300 mb-2">Drop files here or click to browse</p>
+                <p class="text-xs text-gray-500">Supports PDF, TXT, MD, and more</p>
+            `;
+        }
+
+        // File upload functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+
+            // Click to browse
+            dropZone.addEventListener('click', () => {
+                console.log('Drop zone clicked, opening file dialog');
+                fileInput.click();
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                console.log('Files selected:', e.target.files.length);
+                updateDropZoneText(e.target.files);
+            });
+
+            // Drag and drop
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-blue-500');
+                console.log('Drag over');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500');
+                console.log('Drag leave');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500');
+                console.log('Files dropped:', e.dataTransfer.files.length);
+                fileInput.files = e.dataTransfer.files;
+                updateDropZoneText(e.dataTransfer.files);
+            });
+        });
+
+        function updateDropZoneText(files) {
+            const dropZone = document.getElementById('drop-zone');
+            if (files.length > 0) {
+                const fileNames = Array.from(files).map(f => f.name).join(', ');
+                dropZone.innerHTML = `
+                    <svg class="h-12 w-12 text-blue-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <p class="text-blue-300 mb-2">${files.length} file(s) selected</p>
+                    <p class="text-xs text-gray-400">${fileNames}</p>
+                `;
+            } else {
+                dropZone.innerHTML = `
+                    <svg class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p class="text-gray-300 mb-2">Drop files here or click to browse</p>
+                    <p class="text-xs text-gray-500">Supports PDF, TXT, MD, and more</p>
+                `;
+            }
+        }
+
+        async function startUpload() {
+            const fileInput = document.getElementById('file-input');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('Please select files to upload');
+                return;
+            }
+
+            document.getElementById('upload-progress').classList.remove('hidden');
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    console.log(`Uploading file: ${file.name} (${file.size} bytes, ${file.type})`);
+                    
+                    const response = await fetch('http://localhost:8000/api/v1/documents/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        console.log('Upload successful:', result);
+                        successCount++;
+                    } else {
+                        console.error('Upload failed:', result);
+                        errorCount++;
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    errorCount++;
+                }
+                
+                // Update progress
+                const progress = ((i + 1) / files.length) * 100;
+                document.getElementById('upload-bar').style.width = progress + '%';
+                document.getElementById('upload-percent').textContent = Math.round(progress) + '%';
+            }
+            
+            // Show result message
+            if (successCount > 0 && errorCount === 0) {
+                alert(`Successfully uploaded ${successCount} file(s)!`);
+            } else if (successCount > 0 && errorCount > 0) {
+                alert(`Uploaded ${successCount} file(s) successfully, ${errorCount} failed.`);
+            } else {
+                alert(`Upload failed for all ${errorCount} file(s). Check console for details.`);
+            }
+            
+            // Close modal after upload
+            setTimeout(async () => {
+                console.log('Upload completed, closing modal and refreshing documents...');
+                console.log('Success count:', successCount, 'Current page:', currentPage);
+                
+                hideUploadModal();
+                
+                // Always refresh documents data after successful upload
+                if (successCount > 0) {
+                    console.log('Calling forceRefreshDocuments...');
+                    const refreshResult = await forceRefreshDocuments();
+                    console.log('Refresh result:', refreshResult);
+                    
+                    // If we're on documents page, also trigger a manual refresh
+                    if (currentPage === 'documents') {
+                        console.log('Also calling loadDocuments for extra safety...');
+                        await loadDocuments();
+                    }
+                } else {
+                    console.log('No successful uploads, skipping refresh');
+                }
+            }, 500); // Reduced delay from 1000ms to 500ms
+        }
+
+        // Load documents
+        async function loadDocuments() {
+            const loadingElement = document.getElementById('documents-loading');
+            const listElement = document.getElementById('documents-list');
+            
+            // Check if elements exist (might not exist if not on documents page)
+            if (!loadingElement || !listElement) {
+                console.log('Documents page elements not found, skipping load');
+                return;
+            }
+            
+            console.log('Loading documents...');
+            loadingElement.style.display = 'flex';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/documents');
+                console.log('Documents API response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Documents data:', data);
+                
+                documentsData = data.documents;
+                
+                // Check if elements still exist before manipulating them
+                if (loadingElement) {
+                    loadingElement.style.display = 'none';
+                }
+                
+                if (listElement) {
+                    renderDocuments(documentsData);
+                }
+                
+            } catch (error) {
+                console.error('Error loading documents:', error);
+                
+                // Check if loading element still exists before updating it
+                if (loadingElement) {
+                    loadingElement.innerHTML = `
+                        <div class="text-center">
+                            <div class="w-12 h-12 bg-gradient-to-br from-red-600/20 to-red-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <p class="text-gray-400">Failed to load documents</p>
+                            <p class="text-xs text-gray-500 mt-2">Check console for details</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function renderDocuments(documents) {
+            const listElement = document.getElementById('documents-list');
+            
+            if (documents.length === 0) {
+                listElement.innerHTML = `
+                    <div class="flex items-center justify-center h-64">
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-gradient-to-br from-gray-600/20 to-gray-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0.621 0 1.125-.504 1.125-1.125V9.375c0-.621.504-1.125 1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white mb-2">No documents yet</h3>
+                            <p class="text-gray-400 mb-4">Upload your first document to get started</p>
+                            <button onclick="showUploadModal()" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300">
+                                Upload Document
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const documentsHtml = documents.map(doc => {
+                const fileIcon = getFileIcon(doc.source_type);
+                const fileSize = formatFileSize(doc.file_size);
+                const createdDate = new Date(doc.created_at).toLocaleDateString();
+                
+                return `
+                    <div class="glass-effect rounded-lg p-4 border border-gray-700/30 hover:border-blue-500/30 transition-all duration-300">
+                        <div class="flex items-start space-x-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-lg flex items-center justify-center">
+                                    ${fileIcon}
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-white truncate">${doc.title}</h3>
+                                        <p class="text-sm text-gray-400 mt-1">${doc.source_path}</p>
+                                    </div>
+                                    <div class="flex items-center space-x-2 ml-4">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-600/20 to-green-600/20 text-green-300 border border-green-500/30">
+                                            ${doc.processing_status}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="text-gray-300 text-sm">
+                                        ${doc.source_type === 'audio' ? `
+                                            <div class="mb-2 flex items-center space-x-2">
+                                                <svg class="h-4 w-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M9 21H7a2 2 0 01-2-2V5a2 2 0 012-2h2l3.464 3.464L9 9v12zm0 0l3-3m-3 3v-3"/>
+                                                </svg>
+                                                <span class="text-purple-300 text-xs font-medium">Audio Transcription</span>
+                                            </div>
+                                        ` : ''}
+                                        <div id="content-preview-${doc.id}" class="content-preview">
+                                            ${doc.content.length > 200 ? cleanText(doc.content).substring(0, 200) + '...' : cleanText(doc.content)}
+                                        </div>
+                                        <div id="content-full-${doc.id}" class="content-full hidden">
+                                            ${escapeHtml(cleanText(doc.content))}
+                                        </div>
+                                        ${doc.content.length > 200 ? `
+                                            <button 
+                                                id="toggle-btn-${doc.id}" 
+                                                onclick="toggleContent('${doc.id}')" 
+                                                class="mt-3 text-blue-400 hover:text-blue-300 text-xs font-medium transition-colors flex items-center space-x-1 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded-md"
+                                            >
+                                                <span id="toggle-text-${doc.id}">See All Content</span>
+                                                <svg id="toggle-icon-${doc.id}" class="h-3 w-3 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between mt-4">
+                                    <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                        <span class="flex items-center">
+                                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2"/>
+                                            </svg>
+                                            ${fileSize}
+                                        </span>
+                                        <span class="flex items-center">
+                                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4m-9 0h10m-10 0a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V9a2 2 0 00-2-2"/>
+                                            </svg>
+                                            ${doc.chunk_count} chunks
+                                        </span>
+                                        <span class="flex items-center">
+                                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4"/>
+                                            </svg>
+                                            ${createdDate}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <button onclick="viewDocument('${doc.id}')" class="text-blue-400 hover:text-blue-300 transition-colors">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                        </button>
+                                        <button onclick="deleteDocument('${doc.id}')" class="text-red-400 hover:text-red-300 transition-colors">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            listElement.innerHTML = documentsHtml;
+        }
+
+        function getFileIcon(sourceType) {
+            switch (sourceType.toLowerCase()) {
+                case 'pdf':
+                    return '<svg class="h-6 w-6 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path d="M4 18h12V6l-4-4H4v16zm8-14l2 2h-2V4z"/></svg>';
+                case 'audio':
+                    return '<svg class="h-6 w-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M9 21H7a2 2 0 01-2-2V5a2 2 0 012-2h2l3.464 3.464L9 9v12zm0 0l3-3m-3 3v-3"/></svg>';
+                case 'text':
+                case 'txt':
+                    return '<svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>';
+                default:
+                    return '<svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>';
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function toggleContent(docId) {
+            const previewElement = document.getElementById(`content-preview-${docId}`);
+            const fullElement = document.getElementById(`content-full-${docId}`);
+            const toggleText = document.getElementById(`toggle-text-${docId}`);
+            const toggleIcon = document.getElementById(`toggle-icon-${docId}`);
+            
+            if (fullElement.classList.contains('hidden')) {
+                // Show full content
+                previewElement.classList.add('hidden');
+                fullElement.classList.remove('hidden');
+                toggleText.textContent = 'Show Less';
+                toggleIcon.style.transform = 'rotate(180deg)';
+            } else {
+                // Show preview content
+                previewElement.classList.remove('hidden');
+                fullElement.classList.add('hidden');
+                toggleText.textContent = 'See All Content';
+                toggleIcon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function viewDocument(docId) {
+            const doc = documentsData.find(d => d.id === docId);
+            if (doc) {
+                alert(`Document: ${doc.title}\n\nContent:\n${doc.content}`);
+            }
+        }
+
+        async function deleteDocument(docId) {
+            const doc = documentsData.find(d => d.id === docId);
+            if (!doc) {
+                alert('Document not found in current list');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete "${doc.title}"?\n\nThis action cannot be undone.`)) {
+                try {
+                    console.log('Deleting document:', docId);
+                    
+                    const response = await fetch(`http://localhost:8000/api/v1/documents/${docId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    console.log('Delete response status:', response.status);
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Delete result:', result);
+                        
+                        if (result.success) {
+                            alert(`Successfully deleted "${doc.title}"`);
+                            
+                            // Force refresh documents data
+                            setTimeout(async () => {
+                                await forceRefreshDocuments();
+                            }, 100);
+                        } else {
+                            alert(`Failed to delete document: ${result.message || 'Unknown error'}`);
+                        }
+                    } else if (response.status === 404) {
+                        alert(`Document "${doc.title}" was already deleted or not found`);
+                        
+                        // Force refresh documents data
+                        setTimeout(async () => {
+                            await forceRefreshDocuments();
+                        }, 100);
+                    } else {
+                        const errorData = await response.json().catch(() => ({}));
+                        alert(`Failed to delete document: ${errorData.detail || `HTTP ${response.status}`}`);
+                    }
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                        alert('Network error: Could not connect to server. Make sure the backend is running.');
+                    } else {
+                        alert(`Delete failed: ${error.message}`);
+                    }
+                }
+            }
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage(event);
+            }
+        }
+
+        async function sendMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || isTyping) return;
+            
+            // Add user message
+            addMessageToChat('user', message);
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: message })
+                });
+                
+                const data = await response.json();
+                hideTypingIndicator();
+                addMessageToChat('assistant', data.response, data.sources);
+                
+            } catch (error) {
+                hideTypingIndicator();
+                addMessageToChat('assistant', 'Sorry, I encountered an error. Please try again.');
+                console.error('Error:', error);
+            }
+        }
+
+        function addMessage(content, type, sources = []) {
+            const messagesContainer = document.getElementById('messages');
+            
+            // Remove welcome message if it exists
+            const welcomeMessage = messagesContainer.querySelector('.flex.items-center.justify-center.h-full');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'} animate-pulse`;
+            
+            const isUser = type === 'user';
+            const avatarBg = isUser ? 'bg-gradient-to-br from-blue-600 to-purple-600' : 'bg-gradient-to-br from-gray-700 to-gray-800';
+            const messageBg = isUser ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border border-gray-700/50';
+            
+            messageDiv.innerHTML = `
+                <div class="flex max-w-4xl ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start space-x-3">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center relative ${avatarBg} ${isUser ? 'ml-3' : 'mr-3'} shadow-lg">
+                        ${isUser ? 
+                            '<svg class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>' :
+                            '<svg class="h-5 w-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>'
+                        }
+                        ${!isUser ? '<svg class="h-3 w-3 text-purple-300 absolute -top-1 -right-1 animate-pulse" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>' : ''}
+                    </div>
+                    <div class="flex-1 ${isUser ? 'text-right' : 'text-left'}">
+                        <div class="inline-block rounded-2xl px-4 py-3 max-w-2xl ${messageBg} shadow-lg ${isUser ? 'text-white' : 'text-gray-200'}">
+                            ${formatMessage(content)}
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500 ${isUser ? 'text-right' : 'text-left'}">
+                            just now
+                        </div>
+                        ${sources && sources.length > 0 ? formatSources(sources) : ''}
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                messageDiv.classList.remove('animate-pulse');
+            }, 500);
+        }
+
+        function formatMessage(content) {
+            return content.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+                         .replace(/\n/g, '<br>');
+        }
+
+        function formatSources(sources) {
+            if (!sources || sources.length === 0) return '';
+            
+            const sourcesHtml = sources.slice(0, 3).map(source => `
+                <div class="glass-effect rounded-lg p-3 text-xs border border-gray-700/30 hover:border-blue-500/30 transition-all duration-300">
+                    <div class="flex items-start space-x-2">
+                        <svg class="h-3 w-3 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-white truncate">${source.title || 'Untitled'}</p>
+                            <p class="text-gray-300 mt-1">${source.excerpt}</p>
+                            <div class="flex items-center space-x-3 mt-2">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-blue-300 border border-blue-500/30">
+                                    ${source.source_type}
+                                </span>
+                                <span class="text-gray-400 flex items-center">
+                                    <div class="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></div>
+                                    ${Math.round(source.relevance_score * 100)}% match
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            return `
+                <div class="mt-4 space-y-2">
+                    <p class="text-xs font-medium text-gray-400 flex items-center">
+                        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        Sources:
+                    </p>
+                    <div class="space-y-2">${sourcesHtml}</div>
+                </div>
+            `;
+        }
+
+        function showTypingIndicator() {
+            isTyping = true;
+            const messagesContainer = document.getElementById('messages');
+            
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'flex justify-start animate-pulse';
+            typingDiv.innerHTML = `
+                <div class="flex items-start space-x-3 max-w-4xl">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center shadow-lg relative">
+                        <svg class="h-5 w-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        <svg class="h-3 w-3 text-purple-300 absolute -top-1 -right-1 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                    </div>
+                    <div class="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border border-gray-700/50 rounded-2xl px-4 py-3 shadow-lg">
+                        <div class="flex space-x-1">
+                            <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                            <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 150ms"></div>
+                            <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 300ms"></div>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2">AI is thinking...</div>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            isTyping = false;
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Test the connection on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                if (response.ok) {
+                    document.getElementById('status-dot').className = 'w-2 h-2 rounded-full bg-green-400 shadow-lg shadow-green-400/50 animate-pulse';
+                } else {
+                    document.getElementById('status-dot').className = 'w-2 h-2 rounded-full bg-red-400 shadow-lg shadow-red-400/50 animate-pulse';
+                }
+            } catch (error) {
+                document.getElementById('status-dot').className = 'w-2 h-2 rounded-full bg-red-400 shadow-lg shadow-red-400/50 animate-pulse';
+            }
+        });
+    </script>
+</body>
+</html>
