@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_DB: secondbrain
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d secondbrain"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/secondbrain
+      - DATABASE_URL_SYNC=postgresql://user:password@postgres:5432/secondbrain
+      - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/.env:/app/.env
+
+  celery:
+    build: ./backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/secondbrain
+      - DATABASE_URL_SYNC=postgresql://user:password@postgres:5432/secondbrain
+      - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/.env:/app/.env
+    command: celery -A src.ingestion.tasks worker --loglevel=info
+
+volumes:
+  postgres_data:
+  redis_data:
