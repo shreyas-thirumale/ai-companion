@@ -326,6 +326,9 @@ Guidelines:
         }
         
         print(f"🤖 Generating AI response for query: '{query}'")
+        print(f"🔍 Using API key: {OPENAI_API_KEY[:20]}..." if OPENAI_API_KEY else "❌ No API key found")
+        print(f"🔍 Using base URL: {OPENAI_BASE_URL}")
+        
         response = requests.post(
             f"{OPENAI_BASE_URL}/chat/completions",
             headers=headers,
@@ -333,13 +336,17 @@ Guidelines:
             timeout=30
         )
         
+        print(f"🔍 OpenRouter response status: {response.status_code}")
+        print(f"🔍 OpenRouter response headers: {dict(response.headers)}")
+        
         if response.status_code == 200:
             result = response.json()
             ai_response = result["choices"][0]["message"]["content"]
             print(f"✅ AI response generated successfully")
             return ai_response
         else:
-            print(f"❌ OpenRouter API error: {response.status_code} - {response.text}")
+            print(f"❌ OpenRouter API error: {response.status_code}")
+            print(f"❌ Error response body: {response.text}")
             # Fallback response
             doc_titles = [doc_info['doc']['title'] for doc_info in context_docs]
             return f"I found relevant information in your documents: {', '.join(doc_titles)}. However, I'm having trouble generating a response right now. Please check the source documents directly for details about '{query}'."
